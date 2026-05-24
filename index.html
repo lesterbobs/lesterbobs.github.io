@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lester Roberts</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <a href="index.html" class="brand">Lester Roberts</a>
+    <nav>
+      <a href="index.html" class="active">Home</a>
+      <a href="art.html">Art</a>
+      <a href="projects.html">Projects</a>
+      <a href="hire.html">Hire Me</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Hi, I'm Lester.</h1>
+    <p>Welcome to my corner of the internet. I make art, build HTML projects, and take on freelance work.</p>
+
+    <h2>What you'll find here</h2>
+    <ul>
+      <li><a href="art.html">Art</a> &mdash; a gallery of my work.</li>
+      <li><a href="projects.html">Projects</a> &mdash; HTML experiments and small web apps.</li>
+      <li><a href="hire.html">Hire Me</a> &mdash; how to work with me.</li>
+    </ul>
+
+    <a class="button" href="hire.html">Get in touch &rarr;</a>
+  </main>
+
+  <footer>&copy; <span id="year"></span> Lester Roberts</footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

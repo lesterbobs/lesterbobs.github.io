@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Art &mdash; Lester Roberts</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .gallery figure {
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .gallery img {
+      width: 100%;
+      display: block;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      background: #eee;
+    }
+    .gallery figcaption {
+      padding: 0.6rem 0.8rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html" class="brand">Lester Roberts</a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="art.html" class="active">Art</a>
+      <a href="projects.html">Projects</a>
+      <a href="hire.html">Hire Me</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Art</h1>
+    <p>A selection of recent work. Drop images into the <code>art/</code> folder and add them below.</p>
+
+    <div class="gallery">
+      <figure>
+        <img src="art/placeholder-1.jpg" alt="Placeholder artwork 1" onerror="this.style.background='#ddd'" />
+        <figcaption>Untitled &mdash; 2026</figcaption>
+      </figure>
+      <figure>
+        <img src="art/placeholder-2.jpg" alt="Placeholder artwork 2" onerror="this.style.background='#ddd'" />
+        <figcaption>Untitled &mdash; 2026</figcaption>
+      </figure>
+      <figure>
+        <img src="art/placeholder-3.jpg" alt="Placeholder artwork 3" onerror="this.style.background='#ddd'" />
+        <figcaption>Untitled &mdash; 2026</figcaption>
+      </figure>
+    </div>
+  </main>
+
+  <footer>&copy; <span id="year"></span> Lester Roberts</footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
