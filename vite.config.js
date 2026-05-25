@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import { readdirSync, existsSync } from 'fs'
+import react from '@vitejs/plugin-react'
 
 function projectEntries() {
   const projectsDir = resolve(__dirname, 'projects')
@@ -14,6 +15,7 @@ function projectEntries() {
 }
 
 export default defineConfig({
+  plugins: [react()],
   build: {
     assetsInlineLimit: 0,
     rollupOptions: {
