@@ -29,8 +29,14 @@
     </nav>`;
 
   document.querySelector('footer').innerHTML =
-    `&copy; ${new Date().getFullYear()} Lester Roberts &mdash; <a href="https://github.com/lesterbobs/lesterbobs.github.io">GitHub</a>`;
+    `&copy; ${new Date().getFullYear()} Lester Roberts &mdash; <a href="https://www.linkedin.com/in/lester-roberts-b1188a163/">LinkedIn</a> &mdash; <a href="https://github.com/lesterbobs/lesterbobs.github.io">GitHub</a> &mdash; <a href="https://www.instagram.com/lesterbobs/">Instagram</a>`;
 
   window.addEventListener('hashchange', () => showPanel(window.location.hash.slice(1)));
   showPanel(window.location.hash.slice(1));
+
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.getElementById('loadingOverlay').classList.add('active');
+    });
+  });
 }());

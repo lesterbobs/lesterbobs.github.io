@@ -3,7 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lester Alaric Roberts</title>
+  <title>Lester Roberts — Economist, Data Analyst & Artist</title>
+  <meta name="description" content="Personal website of Lester Roberts, economist and data analyst. Explore projects, artwork, and professional background." />
+  <meta name="author" content="Lester Roberts" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Lester Roberts — Economist, Data Analyst & Artist" />
+  <meta property="og:description" content="Personal website of Lester Roberts, economist and data analyst. Explore projects, artwork, and professional background." />
+  <meta property="og:type" content="profile" />
+  <meta property="og:url" content="https://lesterbobs.github.io" />
+  <meta property="profile:first_name" content="Lester" />
+  <meta property="profile:last_name" content="Roberts" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Lester Roberts",
+    "alternateName": "Lester Alaric Roberts",
+    "jobTitle": "Economist",
+    "description": "Economist with a background in data analytics and AI.",
+    "url": "https://lesterbobs.github.io"
+  }
+  </script>
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,7 +39,7 @@
     <main>
       <section class="hero">
         <div class="hero-text">
-          <h1>Hi, I'm Lester,</h1>
+          <h1>Hi, I'm Lester Roberts</h1>
           <p>I'm an economist with a background in data analytics and AI. Check out my art and projects!</p>
         </div>
         <img src="images/me.jpg" alt="Portrait of Lester Alaric Roberts" class="hero-photo" />
@@ -25,7 +49,7 @@
       <ul>
         <li><a href="#projects">Projects</a> &mdash; HTML experiments and small web apps.</li>
         <li><a href="#art">Art</a> &mdash; A collection of my artwork.</li>
-        <li><a href="#books">Book Recs</a> &mdash; My favorite books.</li>
+        <li><a href="#books">Book Recs</a> &mdash; Some of my favorite books.</li>
         <li><a href="#hire">Hire Me</a> &mdash; Why you might want to employ me.</li>
       </ul>
 
@@ -203,9 +227,13 @@
 
       <div class="grid">
         <a class="card" href="projects/xdef/">
+          <div class="award-panel">
+            <img src="images/xdef.png" alt="Game Map" />
+          </div>
           <h3>X Defense</h3>
-          <p>Defend Earth from an Alien Invasion. An LLM-powered game. LLM-driven enemy strategy and battle resolution. Uses RAG to feed the LLM prompt world state information.</p>
-          <p>Requires an API key</p>
+          <p>Defend Earth from an Alien Invasion. LLM-driven enemy strategy and battle resolution. Uses RAG to feed the LLM prompt world state information to maintain consistency.</p>
+          <p>Formatted for Desktop</p>
+          <p>Requires an LLM API key</p>
         </a>
       </div>
     </main>
@@ -292,7 +320,7 @@
   <div class="page" id="panel-hire">
     <main>
       <h1>Hire Me!</h1>
-      <p>I am an award winning economist looking for interesting work.</p>
+      <p>I'm an award-winning economist looking for interesting work.</p>
 
       <h2>What I do:</h2>
       <ul>
@@ -330,6 +358,10 @@
 
   <footer></footer>
   </div><!-- /.content-wrapper -->
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <span class="loading-text">Loading&hellip;</span>
+  </div>
   <script src="components.js"></script>
   <script>
     const pieces = Array.from(document.querySelectorAll('.piece'));
