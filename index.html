@@ -7,31 +7,294 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <a href="index.html" class="brand">Lester Alaric Roberts</a>
-    <nav>
-      <a href="index.html" class="active">Home</a>
-      <a href="art.html">Art</a>
-      <a href="projects.html">Projects</a>
-      <a href="hire.html">Hire Me</a>
-    </nav>
-  </header>
+  <header></header>
+  <div class="content-wrapper">
 
-  <main>
-    <h1>Hi, I'm Lester.</h1>
-    <p>Welcome to my website! I'm an economist with a background in data analytics and AI. Check out my art and projects!</p>
+  <!-- Home -->
+  <div class="page" id="panel-home">
+    <main>
+      <section class="hero">
+        <div class="hero-text">
+          <h1>Hi, I'm Lester</h1>
+          <p>I'm an economist with a background in data analytics and AI. Check out my art and projects!</p>
+        </div>
+        <img src="images/me.jpg" alt="Portrait of Lester Alaric Roberts" class="hero-photo" />
+      </section>
 
-    <h2>What you'll find here</h2>
-    <ul>
-      <li><a href="art.html">Art</a> &mdash; a gallery of my work.</li>
-      <li><a href="projects.html">Projects</a> &mdash; HTML experiments and small web apps.</li>
-      <li><a href="hire.html">Hire Me</a> &mdash; how to work with me.</li>
-    </ul>
+      <h2>What you'll find here</h2>
+      <ul>
+        <li><a href="#projects">Projects</a> &mdash; HTML experiments and small web apps.</li>
+        <li><a href="#art">Art</a> &mdash; A collection of my artwork.</li>
+        <li><a href="#hire">Hire Me</a> &mdash; Why you might want to hire me.</li>
+      </ul>
 
-    <a class="button" href="hire.html">Get in touch &rarr;</a>
-  </main>
+      <a class="button" href="#hire">Get in touch</a>
+    </main>
+  </div>
 
-  <footer>&copy; <span id="year"></span> Lester Alaric Roberts</footer>
-  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <!-- Art -->
+  <div class="page" id="panel-art">
+    <main class="art-main">
+      <div class="art-header">
+        <h1>Selected Works</h1>
+        <span class="count">Digital Painting, Traditional Sketches, and 3D Renders</span>
+      </div>
+      <p class="art-intro">Science-fiction and fantasy, portraits and spaceships.</p>
+
+      <section class="gallery" id="gallery">
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/curawan_knight.png" alt="Curawan Knight" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>Digital &middot; 2022</span></div>
+            <h2 class="piece-title">Curawan Knight</h2>
+            <p class="piece-desc">A heavily armored Curawan Knight.</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/curawan_expeditionary.jpg" alt="Curawan Expeditionary" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>Digital &middot; 2020</span></div>
+            <h2 class="piece-title">Curawan Chevalier</h2>
+            <p class="piece-desc">A Curawan expeditionary soldier.</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/obama.png" alt="Obama" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>Digital &middot; 2022</span></div>
+            <h2 class="piece-title">Obama</h2>
+            <p class="piece-desc">Portrait of Obama.</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/ship_vaporwave.png" alt="Ship Vaporwave" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>3D Render &middot; 2022</span></div>
+            <h2 class="piece-title">Warship Vaporwave</h2>
+            <p class="piece-desc">A ticonderoga cruiser, inspired by the Vaporwave aesthetic, done in Blender.</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/model_ships.png" alt="Low-Poly Warships" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>3D Render &middot; 2022</span></div>
+            <h2 class="piece-title">Low-Poly Warships</h2>
+            <p class="piece-desc">A collection of low-poly warships, done in Blender.</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/interception.png" alt="UFO Interception" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>Digital &middot; 2022</span></div>
+            <h2 class="piece-title">Interception</h2>
+            <p class="piece-desc">Low-poly UFO interception, done in Blender.</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/electric_shepard.jpg" alt="Robot Shepard" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>Pencil Sketch &middot; 2021</span></div>
+            <h2 class="piece-title">Have you seen my electric sheep?</h2>
+            <p class="piece-desc">A robot on a strange world.</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/penguin.jpg" alt="Penguin Spy" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>Pencil &middot; 2021</span></div>
+            <h2 class="piece-title">Cold War</h2>
+            <p class="piece-desc">He has a license to krill...</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/spaceship_mars.png" alt="Spaceship Mars" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>3D Render &middot; 2021</span></div>
+            <h2 class="piece-title">Spaceship Near Mars</h2>
+            <p class="piece-desc">Spaceship in front of Mars, done in Blender.</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/nato.jpg" alt="A Sci-fi Soldier" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>Pencil Sketch &middot; 2020</span></div>
+            <h2 class="piece-title">Future Soldier</h2>
+            <p class="piece-desc">Sketch of a sci-fi soldier.</p>
+          </div>
+        </article>
+
+        <article class="piece">
+          <div class="piece-frame">
+            <img src="artwork/saturn.jpg" alt="Spaceship Near Saturn" loading="lazy" />
+          </div>
+          <div class="piece-text">
+            <div class="piece-meta"><span>Pencil Sketch &middot; 2019</span></div>
+            <h2 class="piece-title">Spaceship Near Saturn</h2>
+            <p class="piece-desc">Sketch of a space warship, superstructure inspired by the Arleigh Burke.</p>
+          </div>
+        </article>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- Lightbox — lives outside panels so it's never hidden by panel switching -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Artwork viewer">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+    <button class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Previous">&#10094;</button>
+    <button class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Next">&#10095;</button>
+    <div class="lightbox-stage">
+      <div class="lightbox-image"><img id="lightboxImg" src="" alt="" /></div>
+      <div class="lightbox-placard">
+        <div class="placard-meta"><span class="muted"><span id="placardKind"></span></span></div>
+        <h2 class="placard-title" id="placardTitle"></h2>
+        <p class="placard-desc" id="placardDesc"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects -->
+  <div class="page" id="panel-projects">
+    <main>
+      <h1>Projects</h1>
+      <p>HTML web apps.</p>
+
+      <div class="grid">
+        <a class="card" href="projects/xdef/">
+          <h3>X Defense</h3>
+          <p>Defend Earth from an Alien Invasion. An LLM-powered game. LLM-driven enemy strategy and battle resolution. Uses RAG to feed the LLM prompt world state information.</p>
+          <p>Requires an API key</p>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <!-- Hire -->
+  <div class="page" id="panel-hire">
+    <main>
+      <h1>Hire Me!</h1>
+      <p>I am an award winning economist looking for interesting work.</p>
+
+      <h2>What I do:</h2>
+      <ul>
+        <li>Develop Algorithms to Solve Problems</li>
+        <li>Analyze Data and Deliver Insights</li>
+      </ul>
+
+      <h2>Experience:</h2>
+      <h3>Federal Communications Commission</h3>
+      <ul>
+        <li>Developed a network analysis algorithm to map, visualize, and test for single points of failure in EAS distribution hierarchies.</li>
+        <li>Performed research, data collection, and analysis for multibillion dollar telecommunications mergers.</li>
+        <li>Created data pipelines to format, clean, and analyze industry data.</li>
+        <li>Designed market simulations to perform cost effectiveness analysis.</li>
+        <li>Build geospatial visualizations to inform leadership decision-making.</li>
+      </ul>
+      <figure class="award-panel">
+        <img src="images/award.jpg" alt="Me with FCC Commissioner Jessica Rosenworcel" />
+        <figcaption>
+          <p class="award-credit">Image Credit: Federal Communications Commission</p>
+          <p class="award-desc">With FCC Commissioner Jessica Rosenworcel, receiving recognition for contributions to emergency communications research and EAS network analysis.</p>
+        </figcaption>
+      </figure>
+
+      <h2>Education:</h2>
+      <h3>MS in Applied Economics</h3>
+      <h3>BA in Economics</h3>
+
+      <h2>Get in touch</h2>
+      <p>Email me at <a href="mailto:lesterbobs@gmail.com">lesterbobs@gmail.com</a>.</p>
+
+      <a class="button" href="mailto:lesterbobs@gmail.com">Email Me</a>
+    </main>
+  </div>
+
+  <footer></footer>
+  </div><!-- /.content-wrapper -->
+  <script src="components.js"></script>
+  <script>
+    const pieces = Array.from(document.querySelectorAll('.piece'));
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const placardTitle = document.getElementById('placardTitle');
+    const placardDesc = document.getElementById('placardDesc');
+    const placardKind = document.getElementById('placardKind');
+    let currentIndex = -1;
+
+    function openLightbox(index) {
+      currentIndex = index;
+      const piece = pieces[index];
+      const img = piece.querySelector('img');
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.alt;
+      placardTitle.textContent = piece.querySelector('.piece-title').textContent;
+      placardDesc.textContent = piece.querySelector('.piece-desc').textContent;
+      const metaSpans = piece.querySelectorAll('.piece-meta span');
+      placardKind.textContent = metaSpans[metaSpans.length - 1].textContent;
+      lightbox.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('open');
+      document.body.style.overflow = '';
+      currentIndex = -1;
+    }
+
+    function step(delta) {
+      if (currentIndex < 0) return;
+      openLightbox((currentIndex + delta + pieces.length) % pieces.length);
+    }
+
+    pieces.forEach((piece, i) => {
+      piece.querySelector('.piece-frame').addEventListener('click', () => openLightbox(i));
+    });
+
+    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+    document.getElementById('lightboxPrev').addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
+    document.getElementById('lightboxNext').addEventListener('click', (e) => { e.stopPropagation(); step(1); });
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox || e.target.classList.contains('lightbox-stage') || e.target.classList.contains('lightbox-image')) {
+        closeLightbox();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft') step(-1);
+      else if (e.key === 'ArrowRight') step(1);
+    });
+  </script>
 </body>
 </html>
