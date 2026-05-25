@@ -31,12 +31,16 @@
   document.querySelector('footer').innerHTML =
     `&copy; ${new Date().getFullYear()} Lester Roberts &mdash; <a href="https://www.linkedin.com/in/lester-roberts-b1188a163/">LinkedIn</a> &mdash; <a href="https://github.com/lesterbobs/lesterbobs.github.io">GitHub</a> &mdash; <a href="https://www.instagram.com/lesterbobs/">Instagram</a>`;
 
-  window.addEventListener('hashchange', () => showPanel(window.location.hash.slice(1)));
+  const overlay = document.getElementById('loadingOverlay');
+
+  window.addEventListener('pageshow', () => overlay.classList.remove('active'));
+  window.addEventListener('hashchange', () => {
+    overlay.classList.remove('active');
+    showPanel(window.location.hash.slice(1));
+  });
   showPanel(window.location.hash.slice(1));
 
   document.querySelectorAll('.card').forEach(card => {
-    card.addEventListener('click', () => {
-      document.getElementById('loadingOverlay').classList.add('active');
-    });
+    card.addEventListener('click', () => overlay.classList.add('active'));
   });
 }());
