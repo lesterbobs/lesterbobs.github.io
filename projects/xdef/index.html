@@ -3077,6 +3077,708 @@ async function invokeCommander(state, month) {
 }
 
 
+/* ===== src/ai/designer.jsx ===== */
+/* ============================================================================
+   DESIGNER — produces concrete stat blocks for design requests batched from
+   the Director (XDEF tech) and the Commander (alien personnel/UFOs).
+
+   ARCHITECTURE
+   ------------
+   Director/Commander no longer emit full stat blocks. They emit *requests*
+   (intent + summary + hints). Requests are pushed onto state.designQueue.pending
+   and a stub entry is registered immediately in the relevant catalog
+   (RESEARCH_PROJECTS / ITEMS / AIRCRAFT_MODELS / bestiary) marked with
+   `_pendingDesign: true`. The stub holds the desired id so OTHER tool calls
+   in the SAME turn that reference the id (add_inventory, equip_soldier,
+   crew_override, …) succeed — they just operate on a placeholder.
+
+   After the requesting agent's response is fully applied, the Designer is
+   invoked once with the entire pending batch + relevant context. Its output
+   overwrites the stubs with real stats and clears `_pendingDesign`. Research
+   projects that requested autocomplete are completed at this point (NOT
+   earlier), which is when their unlocks actually carry stats.
+
+   This means the only ordering hazard — a research project unlocking an item
+   with no stats — is avoided: autocompletion is deferred until the Designer
+   has supplied the payload. Stubs that fail to be filled (network error,
+   parse error, Designer refused) are GC'd by abandonPendingDesigns().
+   ============================================================================ */
+
+
+/* ---------------------------------------------------------------------------
+   STAT SEMANTICS — single source of truth, baked into the Designer's prompt.
+   When ranges change, update them here, not in the Director/Commander prompts.
+--------------------------------------------------------------------------- */
+
+const DESIGN_STAT_REFERENCE = `
+ALIEN PERSONNEL (kind:"alien") — ground units / UFO crew:
+  health: a human ~10; 3 is fragile fodder; 100 is a juggernaut
+  armor: 0 unarmored; 5 light alloy; 10 heavy alloy; 20 walking tank
+  aim: <40 fodder/support; 60 average; 80 elite; 95 T4 sniper
+  mobility: 10 sluggish; 50 human baseline; 100 fast
+  will: 10 easily routed; 50 average; 100 unshakable
+  psi: 0 mundane; 60 trained psion; 100 apex mind
+  tier: 1 (basic crew) … 4 (elite, late-invasion units). Tier cap = min(4, 1+floor(month/2))
+
+UFOs (kind:"ufo") — air craft:
+  size: tiny | small | medium | large | huge
+  hull: 100 probe; 200 scout; 600 fighter; 1500 transport; 4000+ battleship
+  speed: 1800 (slow) … 5000 (fast). Most craft 2200-3500
+  weapon_damage: 5 (probe ineffectual) … 30 (AMRAAM-equivalent) … 300 (heavy beam) … 1000 (superweapon)
+  evasion: 0 (lumbering) … 100 (jinking probe). Most 20-60
+  crew: array of {unit:<alien_type_id>, min, max}. Reference EXISTING alien ids OR ids being designed in this same batch.
+
+AIRCRAFT (kind:"aircraft") — XDEF interceptors / transports:
+  hullMax: 60-1000 (F-15 ~150; heavy gunship 350)
+  speed: 1500-5000
+  range: 2000-9000
+  armor: 0-10
+  maneuverability: 10-100
+  hardpoints: 0-4 (0-1 for transports)
+  payload_weight: 0-5000 (kg of weapons it can mount)
+  role: "interceptor" | "transport"
+  build_points: 40-400 engineer-hours
+  build_money: 1-2000 ($M per unit)
+  build_duranium / build_sorium: ONLY when design is plausibly built from alien materials. 0 for mundane human tech.
+
+AIR WEAPONS (kind:"air_weapon"):
+  damage: 5-100 (AMRAAM ~30)
+  weight: 20-500 kg (vs aircraft payload_weight)
+  ammo: 1-12 for missiles; >100 for cannons;
+  build_points: 1-200, build_money: 1-200
+
+EQUIPMENT (kind:"equipment") — soldier gear:
+  item_category: "infantry_weapon" | "armor" | "utility"
+  weight: 0-30 kg (rifle ~3kg; suit ~8kg; medkit ~1kg)
+  build_points: 1-300, build_money: 1-100
+  build_duranium 0-10 / build_sorium 0-5 — only for alien-derived tech
+
+COMMON:
+- All numeric stats must be plain integers within the stated ranges.
+- Build materials (duranium/sorium): mundane human tech → 0; alien hybrid → small amounts; reverse-engineered alien → larger amounts.
+`;
+
+
+const DESIGNER_SYSTEM_PROMPT = `You are the Designer — the engineering / xenology authority for the simulation. You convert design REQUESTS (a name, a summary, optional hints) into concrete stat blocks. You do not strategize, narrate, or speak in character; you produce balanced, plausible specifications.
+
+============================================================================
+THE CONTRACT — read this first, it is non-negotiable.
+============================================================================
+You receive N requests in <requests count="N">. You produce N designs in your response. NEVER fewer. NEVER more. NEVER skip a request because it is hard, redundant, or duplicative — produce something for every request_id you were given.
+
+Each design entry MUST contain:
+  1. "request_id" — copied VERBATIM from the input. This is how the engine routes your design back to its requester. If you omit, alter, or invent a request_id, the design is discarded and the player loses content.
+  2. "kind" — copied VERBATIM from the input request. Do not change the kind.
+  3. "id", "name", "summary".
+  4. EXACTLY ONE kind-specific payload block whose key matches the kind (see KIND → PAYLOAD KEY table below). Missing this block means the design is hollow and the engine cannot register the item.
+
+KIND → PAYLOAD KEY (mandatory mapping):
+  kind:"aircraft"       →  "aircraft":      { ... }
+  kind:"air_weapon"     →  "air_weapon":    { ... }
+  kind:"equipment"      →  "equipment":     { ... }
+  kind:"alien"          →  "alien":         { ... }
+  kind:"ufo"            →  "ufo":           { ... }
+Include ONLY the one block matching the kind. Do not include the other blocks. The named block is REQUIRED, not optional.
+
+============================================================================
+RESPONSE SHAPE — exactly ONE JSON object, nothing else.
+============================================================================
+{
+  "designs": [
+    {
+      "request_id": "<copied verbatim from input>",
+      "kind": "<copied verbatim from input>",
+      "id": "snake_case_id (use the requested id when supplied; otherwise derive from the name)",
+      "name": "Display Name",
+      "summary": "1-3 sentence evocative description. Information dense. Do not contradict the requester's intent.",
+      "tier": 1-4,    // REQUIRED for kind:"alien" and kind:"ufo"; OMIT for all other kinds.
+
+      // ===== EXACTLY ONE of the following blocks, matching the kind: =====
+
+      "alien": {
+        "stats": { "health": int, "armor": int, "aim": 0-100, "mobility": 0-100, "will": 0-100, "psi": 0-100 },
+        "traits": ["short_trait_strings"],
+        "weapons": ["short_weapon_strings"],
+        "weapon_summary": "what the judge needs to know about its armament/behavior in combat"
+      },
+      "ufo": {
+        "stats": { "size": "tiny|small|medium|large|huge", "hull": int, "speed": int, "weapon_damage": int, "evasion": int },
+        "crew": [ { "unit": "alien_type_id", "min": int, "max": int } ],
+        "weapon_summary": "armament/combat behavior for the judge"
+      },
+      "aircraft": {
+        "item_name": "Display name as buildable item",
+        "hullMax": int, "speed": int, "range": int, "armor": int, "maneuverability": int,
+        "hardpoints": int, "payload_weight": int,
+        "role": "interceptor|transport",
+        "build_points": int, "build_money": int,
+        "build_duranium": int, "build_sorium": int
+      },
+      "air_weapon": {
+        "item_name": "Display name",
+        "damage": int, "weight": int, "ammo": int,
+        "build_points": int, "build_money": int, "build_duranium": int, "build_sorium": int
+      },
+      "equipment": {
+        "item_name": "Display name",
+        "item_category": "infantry_weapon|armor|utility",
+        "description": "1-2 sentence flavor + mechanical effect",
+        "weight": int, "build_points": int, "build_money": int,
+        "build_duranium": int, "build_sorium": int
+      }
+    }
+    // ... one entry per input request, IN THE SAME ORDER as the input.
+  ]
+}
+
+============================================================================
+STAT REFERENCE — Use this to calibrate design stats
+============================================================================
+${DESIGN_STAT_REFERENCE}
+
+============================================================================
+DESIGN PRINCIPLES
+============================================================================
+- Honor the requester's intent. The summary they provide is canonical — do not redesign their concept. You fill in NUMBERS and refine wording.
+- Honor the requester's hints (tier_target, role, item_category, prerequisites, cost_hours). If a hint conflicts with the summary, prefer the summary.
+- Respect the tier cap given in the input (alien/ufo only).
+- Sanity-check power level against existing catalog entries shown in <existing_*>.
+- Reference existing alien ids in UFO crew arrays when reasonable. You can also reference alien ids being designed in the SAME batch.
+- Materials cost: human tech → duranium/sorium 0. Hybrid tech → small amounts. Advanced designs → larger amounts.
+  ✓ designs.length equals the input's <requests count="...">
+  ✓ every design has a request_id copied verbatim from the input
+  ✓ every design has its kind-specific payload block (per KIND → PAYLOAD KEY)
+
+============================================================================
+JSON STRICTNESS — your output is machine-parsed
+============================================================================
+- Exactly ONE JSON object, no prose before or after, no markdown fences.
+- Inside arrays, include ONLY design objects matching the schema.
+- All numbers are plain digits (optional leading minus, single decimal point).
+- Valid escape sequences only: \\", \\\\, \\/, \\b, \\f, \\n, \\r, \\t, \\uXXXX.
+- No trailing commas, no comments, double quotes only.`;
+
+/* ---------------------------------------------------------------------------
+   DESIGN REQUEST QUEUE — runtime helpers used by Director/Commander handlers.
+   `kind` is the canonical taxonomy across XDEF tech and alien xenotypes.
+--------------------------------------------------------------------------- */
+
+const DESIGN_KINDS = new Set(['aircraft', 'air_weapon', 'equipment', 'alien', 'ufo']);
+
+function ensureDesignQueue(draft) {
+  if (!draft.designQueue) draft.designQueue = { pending: [], resolved: [] };
+  if (!Array.isArray(draft.designQueue.pending)) draft.designQueue.pending = [];
+  if (!Array.isArray(draft.designQueue.resolved)) draft.designQueue.resolved = [];
+  return draft.designQueue;
+}
+
+// Generate a unique id within the relevant catalog. Prefers caller's hint.
+function chooseDesignId(kind, requestedId, name, draft) {
+  const slugify = (s) => String(s || '').trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'unnamed';
+  let base = requestedId ? slugify(requestedId) : slugify(name);
+  if (!base) base = kind;
+  const isAlien = kind === 'alien';
+  const isUfo = kind === 'ufo';
+  const taken = (id) => {
+    if (isAlien) return !!(ALIEN_TYPES[id] || draft.bestiary?.aliens?.[id]);
+    if (isUfo)   return !!(UFO_TYPES[id]   || draft.bestiary?.ufos?.[id]);
+    return !!(RESEARCH_PROJECTS[id] || ITEMS[id]);
+  };
+  if (!taken(base)) return base;
+  for (let i = 2; i < 99; i++) {
+    const candidate = `${base}_${i}`;
+    if (!taken(candidate)) return candidate;
+  }
+  return `${base}_${Math.floor(Math.random() * 9999)}`;
+}
+
+/* Register a placeholder in the relevant catalog so other tool calls in the
+   same turn can reference the id without rejection. The placeholder carries
+   `_pendingDesign: true` and intentionally OMITS build/stats blocks — that
+   way the engineering UI's "if (!item.build) return false" filter hides it
+   until the Designer fills it in. */
+function createDesignStub(draft, request) {
+  const { kind, id, name, summary, hints } = request;
+  if (kind === 'aircraft' || kind === 'air_weapon' || kind === 'equipment') {
+    if (RESEARCH_PROJECTS[id]) return;  // do not clobber existing real project
+    const categoryByKind = {
+      aircraft: 'aircraft',
+      air_weapon: 'aircraft_weapons',
+      equipment: 'equipment',
+    };
+    RESEARCH_PROJECTS[id] = {
+      id,
+      name,
+      category: categoryByKind[kind],
+      prerequisites: Array.isArray(hints?.prerequisites) ? hints.prerequisites.filter(p => RESEARCH_PROJECTS[p]) : [],
+      cost_hours: Number(hints?.cost_hours) || (kind === 'air_weapon' ? 60 : 160),
+      specialty_bonus: {},
+      unlocks: { projects: [], items: [id] },
+      summary,
+      custom: true,
+      kind,
+      _pendingDesign: true,
+    };
+    if (!draft.research.customProjects) draft.research.customProjects = [];
+    if (!draft.research.customProjects.includes(id)) draft.research.customProjects.push(id);
+
+    // ITEMS placeholder so add_inventory / equip references resolve. NO build,
+    // NO stats — those are populated by finalizeDesign. The engineering UI
+    // hides items without a build, so the player won't see it as buildable.
+    const itemCategoryByKind = {
+      aircraft: 'aircraft',
+      air_weapon: 'aircraft_weapon',
+      equipment: ['infantry_weapon','armor','utility'].includes(hints?.item_category) ? hints.item_category : 'utility',
+    };
+    ITEMS[id] = {
+      id,
+      name,
+      category: itemCategoryByKind[kind],
+      summary,
+      _pendingDesign: true,
+    };
+  } else if (kind === 'alien') {
+    if (!draft.bestiary) draft.bestiary = { aliens: {}, ufos: {} };
+    if (ALIEN_TYPES[id] || draft.bestiary.aliens[id]) return;
+    draft.bestiary.aliens[id] = {
+      id,
+      name,
+      tier: Math.max(1, Math.min(4, Number(hints?.tier_target) || 1)),
+      summary,
+      stats: { health: 1, armor: 0, aim: 1, mobility: 1, will: 1, psi: 0 },
+      traits: [],
+      weapons: [],
+      weapon_summary: '',
+      _pendingDesign: true,
+    };
+  } else if (kind === 'ufo') {
+    if (!draft.bestiary) draft.bestiary = { aliens: {}, ufos: {} };
+    if (UFO_TYPES[id] || draft.bestiary.ufos[id]) return;
+    draft.bestiary.ufos[id] = {
+      id,
+      name,
+      tier: Math.max(1, Math.min(4, Number(hints?.tier_target) || 1)),
+      summary,
+      stats: { size: 'small', hull: 100, speed: 2000, weapon_damage: 0, evasion: 0 },
+      crew: [],
+      weapon_summary: '',
+      _pendingDesign: true,
+    };
+  }
+}
+
+// Push a new request onto the queue + register its stub. Returns the request
+// object (with id filled in). Callers should pass partial { kind, requested_id,
+// name, summary, hints, requester, autocomplete }.
+function enqueueDesignRequest(draft, partial) {
+  if (!partial || !DESIGN_KINDS.has(partial.kind)) return null;
+  const q = ensureDesignQueue(draft);
+  const id = chooseDesignId(partial.kind, partial.requested_id, partial.name, draft);
+  const name = String(partial.name || id).slice(0, 60);
+  const summary = String(partial.summary || '').slice(0, 280);
+  const request = {
+    request_id: uid('dq'),
+    kind: partial.kind,
+    id,
+    name,
+    summary,
+    hints: partial.hints || {},
+    requester: partial.requester || 'unknown',
+    autocomplete: !!partial.autocomplete,
+    requestedAt: draft.meta.currentDate,
+    status: 'queued',
+  };
+  createDesignStub(draft, request);
+  q.pending.push(request);
+  return request;
+}
+
+
+/* ---------------------------------------------------------------------------
+   DESIGNER INVOCATION
+--------------------------------------------------------------------------- */
+
+function buildDesignerUserPrompt(state, requests) {
+  const month = (state.alienPlanHistory?.length || 0) + 1;
+  const tierCap = Math.min(4, 1 + Math.floor(month / 2));
+
+  const existingAliens = Object.values(allAlienTypes(state)).filter(a => !a._pendingDesign).map(a => {
+    const s = a.stats || {};
+    return `    ${a.id} (T${a.tier}) "${a.name}" — hp:${s.health} aim:${s.aim} arm:${s.armor} mob:${s.mobility} will:${s.will}${s.psi ? ` psi:${s.psi}` : ''}`;
+  }).join('\n') || '    (none yet)';
+
+  const existingUfos = Object.values(allUfoTypes(state)).filter(u => !u._pendingDesign).map(u => {
+    const s = u.stats || {};
+    return `    ${u.id} (T${u.tier}) "${u.name}" — size:${s.size} hull:${s.hull} spd:${s.speed} dmg:${s.weapon_damage} evasion:${s.evasion}`;
+  }).join('\n') || '    (none yet)';
+
+  const existingItems = Object.values(ITEMS).filter(it => !it._pendingDesign).map(it => {
+    const parts = [`    ${it.id} [${it.category || '?'}] "${it.name || it.id}"`];
+    if (it.stats?.damage != null) parts.push(`dmg:${it.stats.damage}`);
+    if (it.stats?.weight != null) parts.push(`wt:${it.stats.weight}`);
+    if (it.build) parts.push(`build:${it.build.hours || 0}h $${it.build.money || 0}M`);
+    return parts.join(' · ');
+  }).join('\n') || '    (none)';
+
+  const existingResearch = Object.values(RESEARCH_PROJECTS).filter(p => !p._pendingDesign).map(p => {
+    return `    ${p.id} [${p.category || '?'}] "${p.name}" cost:${p.cost_hours}h`;
+  }).join('\n') || '    (none)';
+
+  const reqLines = requests.map(r => {
+    const hintStr = Object.entries(r.hints || {})
+      .filter(([, v]) => v != null && v !== '')
+      .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`)
+      .join(', ') || '(no hints)';
+    return `  - request_id: ${r.request_id}
+    kind: ${r.kind}
+    id: ${r.id}
+    name: ${r.name}
+    summary: ${r.summary}
+    hints: ${hintStr}
+    requester: ${r.requester}`;
+  }).join('\n');
+
+  return `<context>
+  campaign_month: ${month}
+  tier_cap_alien_and_ufo: ${tierCap}
+  date: ${state.meta.currentDate}
+</context>
+
+<existing_alien_types>
+${existingAliens}
+</existing_alien_types>
+
+<existing_ufo_types>
+${existingUfos}
+</existing_ufo_types>
+
+<existing_items>
+${existingItems}
+</existing_items>
+
+<existing_research>
+${existingResearch}
+</existing_research>
+
+<requests count="${requests.length}">
+${reqLines}
+</requests>
+
+Produce EXACTLY ${requests.length} design${requests.length === 1 ? '' : 's'} — one per request_id above, in the same order. Each must include its kind-specific payload block (kind:"${requests[0]?.kind}" → "${requests[0]?.kind}":{...}, etc.). Respond with JSON only.`;
+}
+
+async function invokeDesigner(state, requests) {
+  const user = buildDesignerUserPrompt(state, requests);
+  if (state.mockMode || !state.apiKey) {
+    const mock = mockDesignerResponse(state, requests);
+    return { raw: JSON.stringify(mock, null, 2), parsed: mock, prompt: user };
+  }
+  const raw = await callLLM({
+    apiKey: state.apiKey, model: state.modelId, provider: state.provider,
+    system: DESIGNER_SYSTEM_PROMPT, user, temperature: 0.7,
+  });
+  const parsed = extractJSON(raw);
+  return { raw, parsed, prompt: user };
+}
+
+
+/* ---------------------------------------------------------------------------
+   FINALIZE — overwrite a stub with the Designer's real stat block, then
+   apply any deferred research completion. Numeric fields are clamped to the
+   ranges the Designer was instructed to honor.
+--------------------------------------------------------------------------- */
+
+function _clamp(n, lo, hi, fallback) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return fallback;
+  return Math.max(lo, Math.min(hi, Math.round(v)));
+}
+
+function finalizeDesign(draft, request, design) {
+  const { kind, id } = request;
+  if (!design) return false;
+
+  if (kind === 'alien') {
+    const tierCap = Math.min(4, 1 + Math.floor(((draft.alienPlanHistory?.length || 0) + 1) / 2));
+    const a = design.alien || {};
+    const stats = a.stats || {};
+    const tier = _clamp(design.tier, 1, tierCap, 1);
+    const entry = {
+      id,
+      name: String(design.name || request.name).slice(0, 60),
+      tier,
+      summary: String(design.summary || request.summary).slice(0, 280),
+      stats: {
+        health: _clamp(stats.health, 1, 200, 10),
+        armor: _clamp(stats.armor, 0, 30, 0),
+        aim: _clamp(stats.aim, 0, 100, 50),
+        mobility: _clamp(stats.mobility, 0, 100, 50),
+        will: _clamp(stats.will, 0, 100, 50),
+        psi: _clamp(stats.psi, 0, 100, 0),
+      },
+      traits: Array.isArray(a.traits) ? a.traits.map(t => String(t).slice(0, 30)).slice(0, 8) : [],
+      weapons: Array.isArray(a.weapons) ? a.weapons.map(w => String(w).slice(0, 40)).slice(0, 6) : [],
+      weapon_summary: String(a.weapon_summary || '').slice(0, 240),
+    };
+    if (!draft.bestiary) draft.bestiary = { aliens: {}, ufos: {} };
+    draft.bestiary.aliens[id] = entry;
+    return true;
+  }
+
+  if (kind === 'ufo') {
+    const u = design.ufo || {};
+    const stats = u.stats || {};
+    const tierCap = Math.min(4, 1 + Math.floor(((draft.alienPlanHistory?.length || 0) + 1) / 2));
+    const sizes = ['tiny', 'small', 'medium', 'large', 'huge'];
+    const entry = {
+      id,
+      name: String(design.name || request.name).slice(0, 60),
+      tier: _clamp(design.tier, 1, tierCap, 1),
+      summary: String(design.summary || request.summary).slice(0, 280),
+      stats: {
+        size: sizes.includes(stats.size) ? stats.size : 'small',
+        hull: _clamp(stats.hull, 50, 8000, 200),
+        speed: _clamp(stats.speed, 800, 6000, 2200),
+        weapon_damage: _clamp(stats.weapon_damage, 0, 1500, 10),
+        evasion: _clamp(stats.evasion, 0, 100, 20),
+      },
+      crew: Array.isArray(u.crew) ? u.crew.map(c => ({
+        unit: String(c.unit || '').slice(0, 40),
+        min: _clamp(c.min, 0, 40, 1),
+        max: _clamp(c.max, 0, 40, 2),
+      })).filter(c => c.unit) : [],
+      weapon_summary: String(u.weapon_summary || '').slice(0, 240),
+    };
+    if (!draft.bestiary) draft.bestiary = { aliens: {}, ufos: {} };
+    draft.bestiary.ufos[id] = entry;
+    return true;
+  }
+
+  // XDEF kinds — research project + (sometimes) ITEMS entry.
+  const proj = RESEARCH_PROJECTS[id];
+  if (!proj) return false;
+  proj.name = String(design.name || request.name).slice(0, 60);
+  proj.summary = String(design.summary || request.summary).slice(0, 280);
+
+  if (kind === 'aircraft') {
+    const f = design.aircraft || {};
+    const fbp = _clamp(f.build_points, 20, 800, 100);
+    proj.aircraft = {
+      item_name: String(f.item_name || proj.name).slice(0, 60),
+      hullMax: _clamp(f.hullMax, 20, 600, 100),
+      speed: _clamp(f.speed, 500, 6000, 2000),
+      range: _clamp(f.range, 500, 12000, 3000),
+      armor: _clamp(f.armor, 0, 20, 1),
+      maneuverability: _clamp(f.maneuverability, 1, 100, 50),
+      hardpoints: _clamp(f.hardpoints, 0, 8, 2),
+      payload_weight: _clamp(f.payload_weight, 0, 5000, 500),
+      role: ['interceptor', 'transport'].includes(f.role) ? f.role : 'interceptor',
+      build_points: fbp,
+      build_money: _clamp(f.build_money, 1, 2000, Math.max(1, Math.round(fbp * 0.1))),
+      build_duranium: _clamp(f.build_duranium, 0, 200, 0),
+      build_sorium: _clamp(f.build_sorium, 0, 50, 0),
+    };
+  } else if (kind === 'air_weapon') {
+    const w = design.air_weapon || {};
+    const wbp = _clamp(w.build_points, 1, 200, 20);
+    proj.air_weapon = {
+      item_name: String(w.item_name || proj.name).slice(0, 60),
+      damage: _clamp(w.damage, 5, 100, 10),
+      weight: _clamp(w.weight, 20, 500, 50),
+      ammo: Number(w.ammo) === -1 ? -1 : _clamp(w.ammo, 1, 12, 4),
+      build_points: wbp,
+      build_money: _clamp(w.build_money, 1, 200, Math.max(1, Math.round(wbp * 0.1))),
+      build_duranium: _clamp(w.build_duranium, 0, 50, 0),
+      build_sorium: _clamp(w.build_sorium, 0, 20, 0),
+    };
+  } else if (kind === 'equipment') {
+    const eq = design.equipment || {};
+    const validItemCats = ['infantry_weapon', 'armor', 'utility'];
+    const itemCat = validItemCats.includes(eq.item_category) ? eq.item_category : 'utility';
+    proj.itemCategory = itemCat;
+    const ebp = _clamp(eq.build_points, 5, 500, 40);
+    proj.equipment = {
+      item_name: String(eq.item_name || proj.name).slice(0, 60),
+      description: String(eq.description || '').slice(0, 240),
+      weight: _clamp(eq.weight, 0, 30, 3),
+      build_points: ebp,
+      build_money: _clamp(eq.build_money, 1, 100, Math.max(1, Math.round(ebp * 0.1))),
+      build_duranium: _clamp(eq.build_duranium, 0, 30, 0),
+      build_sorium: _clamp(eq.build_sorium, 0, 10, 0),
+      item_category: itemCat,
+    };
+  }
+
+  delete proj._pendingDesign;
+
+  // Now that the project carries real stats, register its derived ITEM /
+  // AIRCRAFT_MODELS entries. Clear the stub first so applyResearchUnlocks
+  // overwrites cleanly.
+  if (ITEMS[id]?._pendingDesign) delete ITEMS[id];
+  applyResearchUnlocks(proj);
+
+  // Now resolve the research project's availability/completion. We defer
+  // these decisions until here because completing a project requires its
+  // unlocks to be real — which only just became true.
+  if (request.autocomplete) {
+    if (!draft.research.completed.includes(id)) draft.research.completed.push(id);
+    pushChat(draft, 'system', `*RESEARCH COMPLETE* — ${proj.name}.`);
+  } else {
+    const prereqsMet = (proj.prerequisites || []).every(p => draft.research.completed.includes(p));
+    if (prereqsMet) {
+      if (!draft.research.available.includes(id) && !draft.research.completed.includes(id)) {
+        draft.research.available.push(id);
+      }
+      pushChat(draft, 'system', `*NEW RESEARCH* — ${proj.name} now available.`);
+    } else {
+      pushChat(draft, 'system', `*NEW RESEARCH (LOCKED)* — ${proj.name} registered; prerequisites pending.`);
+    }
+  }
+  return true;
+}
+
+// Strip stubs that the Designer didn't / couldn't fill in. Called when the
+// Designer fails or returns malformed output, to avoid leaving permanently
+// half-formed entries cluttering the catalogs.
+function abandonPendingDesigns(draft, requests, reason) {
+  requests.forEach(r => {
+    const { kind, id } = r;
+    if (kind === 'alien') {
+      const e = draft.bestiary?.aliens?.[id];
+      if (e?._pendingDesign) delete draft.bestiary.aliens[id];
+    } else if (kind === 'ufo') {
+      const e = draft.bestiary?.ufos?.[id];
+      if (e?._pendingDesign) delete draft.bestiary.ufos[id];
+    } else {
+      if (RESEARCH_PROJECTS[id]?._pendingDesign) delete RESEARCH_PROJECTS[id];
+      if (ITEMS[id]?._pendingDesign) delete ITEMS[id];
+      if (draft.research?.customProjects) {
+        draft.research.customProjects = draft.research.customProjects.filter(p => p !== id);
+      }
+    }
+  });
+  pushLog(draft, 'system', `[DESIGNER] Abandoned ${requests.length} pending design(s): ${reason}`);
+}
+
+// Drain `designQueue.pending`, invoke the Designer, finalize each design,
+// and push records to `designQueue.resolved`. The provider calls this once
+// per Director / Commander response that produced requests.
+async function resolvePendingDesigns(state, applyMutation, debugSink) {
+  const pending = state.designQueue?.pending || [];
+  if (pending.length === 0) return;
+
+  let raw = null, parsed = null, prompt = null, err = null;
+  try {
+    ({ raw, parsed, prompt } = await invokeDesigner(state, pending));
+  } catch (e) {
+    err = e;
+  }
+
+  applyMutation(draft => {
+    if (debugSink) {
+      draft.debug.lastDesignerCall = { prompt: prompt || '(error)', raw: raw || (err && err.message) || '(none)', parsed };
+    }
+    const q = ensureDesignQueue(draft);
+    if (!parsed || !Array.isArray(parsed.designs)) {
+      abandonPendingDesigns(draft, q.pending, err ? `error: ${err.message}` : 'designer returned no usable designs');
+      q.pending = [];
+      return;
+    }
+    const designsByRequest = {};
+    parsed.designs.forEach(d => { if (d && d.request_id) designsByRequest[d.request_id] = d; });
+    const stillPending = [];
+    q.pending.forEach(req => {
+      const design = designsByRequest[req.request_id];
+      const ok = finalizeDesign(draft, req, design);
+      if (ok) {
+        req.status = 'resolved';
+        req.resolvedAt = draft.meta.currentDate;
+        q.resolved.push(req);
+        if (q.resolved.length > 50) q.resolved = q.resolved.slice(-50);
+        const label = req.kind === 'alien' ? 'xenotype' : req.kind === 'ufo' ? 'craft signature' : 'design';
+        pushLog(draft, req.requester === 'commander' ? 'alien' : 'research', `[DESIGNER] ${label} finalized: ${req.name} (${req.id}).`);
+      } else {
+        stillPending.push(req);
+      }
+    });
+    if (stillPending.length) {
+      abandonPendingDesigns(draft, stillPending, 'designer omitted these requests');
+    }
+    q.pending = [];
+  });
+}
+
+
+/* ---------------------------------------------------------------------------
+   MOCK — used when no API key is set. Produces minimal but valid designs so
+   the request/response loop is exercised in offline play.
+--------------------------------------------------------------------------- */
+
+function mockDesignerResponse(state, requests) {
+  const designs = requests.map(r => {
+    const base = {
+      request_id: r.request_id,
+      kind: r.kind,
+      id: r.id,
+      name: r.name,
+      summary: r.summary || `${r.name} — generated stub.`,
+    };
+    if (r.kind === 'alien') {
+      const tier = Math.max(1, Math.min(4, Number(r.hints?.tier_target) || 1));
+      base.tier = tier;
+      base.alien = {
+        stats: {
+          health: 8 + tier * 6,
+          armor: tier - 1,
+          aim: 50 + tier * 8,
+          mobility: 50,
+          will: 40 + tier * 10,
+          psi: 0,
+        },
+        traits: [],
+        weapons: [`Plasma Sidearm T${tier}`],
+        weapon_summary: `Standard armament for ${r.name}.`,
+      };
+    } else if (r.kind === 'ufo') {
+      const tier = Math.max(1, Math.min(4, Number(r.hints?.tier_target) || 1));
+      base.tier = tier;
+      base.ufo = {
+        stats: { size: tier <= 1 ? 'small' : tier <= 2 ? 'medium' : tier <= 3 ? 'large' : 'huge',
+                 hull: 150 * tier, speed: 2200 + tier * 200, weapon_damage: 10 * tier, evasion: 50 - tier * 5 },
+        crew: [{ unit: 'sectoid', min: 2, max: 4 }],
+        weapon_summary: 'Standard ranged armament.',
+      };
+    } else if (r.kind === 'aircraft') {
+      base.aircraft = {
+        item_name: r.name,
+        hullMax: 120, speed: 2400, range: 4000, armor: 2,
+        maneuverability: 60, hardpoints: 2, payload_weight: 500,
+        role: r.hints?.role === 'transport' ? 'transport' : 'interceptor',
+        build_points: 120, build_money: 50,
+        build_duranium: 0, build_sorium: 0,
+      };
+    } else if (r.kind === 'air_weapon') {
+      base.air_weapon = {
+        item_name: r.name,
+        damage: 25, weight: 80, ammo: 4,
+        build_points: 30, build_money: 8,
+        build_duranium: 0, build_sorium: 0,
+      };
+    } else if (r.kind === 'equipment') {
+      base.equipment = {
+        item_name: r.name,
+        item_category: ['infantry_weapon','armor','utility'].includes(r.hints?.item_category) ? r.hints.item_category : 'utility',
+        description: r.summary || 'Field-issue equipment.',
+        weight: 3, build_points: 40, build_money: 8,
+        build_duranium: 0, build_sorium: 0,
+      };
+    }
+    return base;
+  });
+  return { designs };
+}
+
 /* ===== src/ai/judge.jsx ===== */
 /* ============================================================================
    BATTLE JUDGE
