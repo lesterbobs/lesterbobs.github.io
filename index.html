@@ -28,6 +28,7 @@
   }
   </script>
 
+  <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -362,7 +363,7 @@
   <div class="loading-overlay" id="loadingOverlay">
     <span class="loading-text">Loading&hellip;</span>
   </div>
-  <script src="components.js"></script>
+  <script type="module" src="components.js"></script>
   <script>
     const pieces = Array.from(document.querySelectorAll('.piece'));
     const lightbox = document.getElementById('lightbox');
