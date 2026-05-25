@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+  <title>Chinese RP Language Game</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/tabs.css">
+  <link rel="stylesheet" href="css/chat.css">
+  <link rel="stylesheet" href="css/tooltip.css">
+</head>
+<body>
+  <div id="app" data-active-tab="chat">
+    <nav id="tabbar" role="tablist" aria-label="Main navigation">
+      <div class="brand">
+        <span class="brand-hanzi">中文</span>
+        <span class="brand-text">Chinese RP</span>
+      </div>
+      <button class="tab tab-chat" data-tab="chat" role="tab" aria-selected="true">Chat<span class="tab-chevron" id="chat-scn-trigger" role="button" aria-label="Pick scenario" aria-haspopup="listbox" tabindex="0">▾</span></button>
+      <button class="tab" data-tab="scenario" role="tab" aria-selected="false">Scenario</button>
+      <button class="tab" data-tab="vocab" role="tab" aria-selected="false">Vocabulary</button>
+      <button class="tab" data-tab="dictionary" role="tab" aria-selected="false">Dictionary</button>
+      <button class="tab" data-tab="persona" role="tab" aria-selected="false">Persona</button>
+      <button class="tab" data-tab="settings" role="tab" aria-selected="false">Settings</button>
+      <button class="tab" data-tab="debug" role="tab" aria-selected="false">Debug</button>
+    </nav>
+    <main id="tabs">
+      <section class="panel" data-panel="chat" hidden></section>
+      <section class="panel" data-panel="scenario" hidden></section>
+      <section class="panel" data-panel="vocab" hidden></section>
+      <section class="panel" data-panel="dictionary" hidden></section>
+      <section class="panel" data-panel="persona" hidden></section>
+      <section class="panel" data-panel="settings" hidden></section>
+      <section class="panel" data-panel="debug" hidden></section>
+    </main>
+  </div>
+
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-card">
+      <h2>Loading dictionary…</h2>
+      <p id="loading-status">Initializing</p>
+      <div id="loading-progress"><div id="loading-bar"></div></div>
+      <div id="loading-fallback" hidden>
+        <p>Couldn't auto-load <code>cedict_ts.u8</code>. Pick the file manually:</p>
+        <input id="loading-file-input" type="file" accept=".u8,.txt,text/plain">
+      </div>
+    </div>
+  </div>
+
+  <div id="tooltip-root"></div>
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+
+  <script src="bundle.js" defer></script>
+</body>
+</html>

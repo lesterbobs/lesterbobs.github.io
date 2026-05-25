@@ -153,6 +153,13 @@ h3 { font-size: 1rem; margin-top: 0rem; }
 
 a { color: var(--accent); }
 
+.school-logo {
+  height: auto;
+  width: 200px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .muted { color: var(--muted); }
 
 .grid {

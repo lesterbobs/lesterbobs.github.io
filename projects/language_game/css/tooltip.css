@@ -1,0 +1,149 @@
+.tip {
+  position: fixed;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 10px;
+  box-shadow: var(--shadow);
+  z-index: 700;
+  max-width: min(680px, calc(100vw - 24px));
+  min-width: 240px;
+  font-size: 0.95em;
+  animation: tip-in .12s ease-out;
+}
+@keyframes tip-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.tip .tip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.tip .tip-hanzi {
+  font-family: var(--hanzi-font);
+  font-size: 1.7em;
+  font-weight: 500;
+  line-height: 1.1;
+}
+.tip .tip-trad {
+  color: var(--text-muted);
+  font-family: var(--hanzi-font);
+  font-size: 1.05em;
+}
+.tip .tip-pinyin {
+  font-size: 1.05em;
+  font-weight: 500;
+}
+.tip .close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tip .close:hover { background: var(--bg-soft); color: var(--text); }
+.tip ol.defs {
+  margin: 6px 0;
+  padding-left: 18px;
+  font-size: 0.92em;
+}
+.tip ol.defs li { margin-bottom: 2px; line-height: 1.4; }
+.tip .more-defs { color: var(--text-muted); font-size: 0.85em; cursor: pointer; padding-left: 2px; }
+.tip .extra-entries {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.tip .extra-entries .extra-head {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.tip .drilldown {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.tip .drill-char {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  font-family: var(--hanzi-font);
+  font-size: 1.1em;
+  transition: background .12s, border-color .12s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tip .drill-char:hover { background: var(--accent-soft); border-color: var(--accent); }
+.tip .drill-char .arrow { font-size: 0.7em; opacity: 0.6; }
+.tip .vocab-row {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tip .vocab-btn {
+  flex: 1;
+  font-size: 0.85em;
+  padding: 6px 10px;
+}
+.tip .vocab-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+@media (max-width: 600px) {
+  .tip {
+    position: fixed;
+    left: 0 !important;
+    right: 0;
+    bottom: 0 !important;
+    top: auto !important;
+    max-width: none;
+    width: 100%;
+    border-radius: 14px 14px 0 0;
+    padding: 14px 16px calc(14px + var(--safe-bot));
+    animation: tip-up .18s ease-out;
+  }
+  @keyframes tip-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
+.hanzi-hover-overlay {
+  position: fixed;
+  background: var(--highlight);
+  border-radius: 3px;
+  pointer-events: none;
+  /* Above .tip (700) so the highlight is visible when hovering a hanzi
+   * inside an open tooltip's body. The semi-transparent --highlight tints
+   * the area regardless of theme luminance — no blend mode needed. */
+  z-index: 710;
+  transition: opacity .06s;
+}
+
+.tip-backdrop {
+  position: fixed; inset: 0;
+  z-index: 699;
+  background: transparent;
+}
+@media (max-width: 600px) {
+  .tip-backdrop { background: rgba(0,0,0,.2); }
+}
