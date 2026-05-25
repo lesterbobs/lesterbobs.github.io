@@ -1,15 +1,16 @@
 :root {
-  --bg: #d1deec;
+  --bg: #cbcbe7;
+  --bg2: #e7e7f3;
 
   --header-bg: #f3f3f8;
   --main-bg: #f3f3f8;
-  --footer-bg: #d1deec;
+  --footer-bg: #cbcbe7;
 
-  --fg: #000000;
+  --text: #000000;
   --muted: #16181b;
   --accent: #706e51;
   --border: #15243f;
-  --border-light: #15243f33;
+  --border-light: #15243f5e;
 
   --nav-btn-hover: #e2e5ed;
   --nav-btn-active-bg: #cdd1db;
@@ -20,8 +21,8 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  background: var(--bg);
-  color: var(--fg);
+  background: linear-gradient(to bottom, var(--bg2), var(--bg));
+  color: var(--text);
   line-height: 1.6;
   display: flex;
   flex-direction: column;
@@ -67,7 +68,7 @@ header .brand {
   font-weight: 700;
   font-size: 1.15rem;
   text-decoration: none;
-  color: var(--fg);
+  color: var(--text);
 }
 
 nav {
@@ -82,7 +83,7 @@ nav a {
   height: 100%;
   min-width: 60px;
   padding: 0 1.25rem;
-  color: var(--fg);
+  color: var(--text);
   text-decoration: none;
   font-size: 0.95rem;
   transition: background 0.15s ease, color 0.15s ease;
@@ -162,16 +163,17 @@ a { color: var(--accent); }
 
 .card {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 1rem;
-  background: #fff;
+  background: var(--main-bg);
   text-decoration: none;
-  color: var(--fg);
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  color: var(--text);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .card:hover {
-  transform: translateY(-2px);
+  color: var(--text);
+  background: var(--bg2);
   border-color: var(--accent);
 }
 
@@ -269,7 +271,6 @@ main.art-main {
 
 .art-intro {
   color: var(--muted);
-  max-width: 58ch;
   margin: 0 0 0rem;
   font-size: 1rem;
 }
@@ -297,7 +298,7 @@ main.art-main {
 .piece-frame {
   position: relative;
   cursor: zoom-in;
-  background: #efe9df;
+  background: var(--main-bg);
   box-shadow: 0 1px 5px rgba(0,0,0,0.7);
   transition: box-shadow 0.3s ease, transform 0.3s ease;
 }

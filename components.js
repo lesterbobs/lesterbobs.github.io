@@ -3,6 +3,7 @@
     home:     'Lester Alaric Roberts',
     art:      'Art — Lester Alaric Roberts',
     projects: 'Projects — Lester Alaric Roberts',
+    books:    'Book Recs — Lester Alaric Roberts',
     hire:     'Hire Me — Lester Alaric Roberts'
   };
 
@@ -23,6 +24,7 @@
       <a href="#home">Home</a>
       <a href="#art">Art</a>
       <a href="#projects">Projects</a>
+      <a href="#books">Book Recs</a>
       <a href="#hire">Hire Me</a>
     </nav>`;
 
