@@ -262,7 +262,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 @media (max-width: 899px) {
   #app {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr var(--tab-h);
+    grid-template-rows: 1fr calc(var(--tab-h) + var(--safe-bot));
   }
 }
 
@@ -400,4 +400,40 @@ h3 { font-size: 1.05em; margin-bottom: 8px; color: var(--text-muted); text-trans
 
 @media (min-width: 900px) {
   #toast-root { bottom: 24px; }
+}
+
+/* API preset sub-card — holds the fields owned by the active preset. The
+ * "Preset" field label and dropdown directly above it identify what it
+ * contains; no additional connectors or decorations needed. */
+.api-preset-card {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin: 0 0 18px;
+}
+.api-preset-card .field:last-of-type { margin-bottom: 6px; }
+.api-preset-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.api-preset-footer #set-api-dirty-note:not(:empty) {
+  color: var(--accent-2);
+  font-weight: 500;
+}
+
+/* Plain-text replacement for inputs whose value is fixed/derived. Carries
+ * no border, background, or input affordance — signals "this is informational,
+ * not editable" without needing a disabled-input look. */
+.readonly-line {
+  padding: 8px 0 4px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  word-break: break-all;
+  user-select: text;
 }
