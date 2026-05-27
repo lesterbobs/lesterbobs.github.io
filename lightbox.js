@@ -1,4 +1,5 @@
-const pieces = Array.from(document.querySelectorAll('.piece'));
+// Only target art pieces — not book cards
+const pieces = Array.from(document.querySelectorAll('#panel-art .piece'));
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightboxImg');
 const placardTitle = document.getElementById('placardTitle');
