@@ -2,12 +2,36 @@ const pageTitles = {
   home:     'Lester Alaric Roberts',
   art:      'Art — Lester Alaric Roberts',
   projects: 'Projects — Lester Alaric Roberts',
+  issues:   'Issues — Lester Alaric Roberts',
   books:    'Book Recs — Lester Alaric Roberts',
   hire:     'Hire Me — Lester Alaric Roberts'
 };
 
+// ── Smart scroll helper, only scrolls if the element is partially off-screen ──
+function scrollToElement(el) {
+  const rect = el.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 0;
+  const topMargin = headerH + 16;   // clear the sticky header plus a small buffer
+  const bottomMargin = vh * 0.15;   // leave ~15% of viewport below when scrolling up from bottom
+
+  // Calculate how much is hidden above and below the desired safe zone
+  const hiddenAbove = topMargin - rect.top;              // positive if top is above safe zone
+  const hiddenBelow = rect.bottom - (vh - bottomMargin); // positive if bottom is below safe zone
+
+  // Already fully visible? Do nothing.
+  if (hiddenAbove <= 0 && hiddenBelow <= 0) return;
+
+  // Scroll the minimum amount: if hidden above, scroll up; if hidden below, scroll down
+  const scrollAmount = hiddenAbove > 0 ? -hiddenAbove : hiddenBelow;
+
+  el.closest('.content-wrapper').scrollBy({ top: scrollAmount, behavior: 'smooth' });
+}
+
 function showPanel(hash) {
-  const id = (hash && pageTitles[hash]) ? hash : 'home';
+  // Only handle known page hashes; let the browser handle anchor links naturally
+  if (!hash || !pageTitles[hash]) return;
+  const id = hash;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + id).classList.add('active');
   document.title = pageTitles[id];
@@ -34,6 +58,7 @@ document.querySelector('header').innerHTML =
     <a href="#home">Home</a>
     <a href="#art">Art</a>
     <a href="#projects">Projects</a>
+    <a href="#issues">Issues</a>
     <a href="#books">Book Recs</a>
     <a href="#hire">Hire Me</a>
   </nav>`;
@@ -69,10 +94,86 @@ const overlay = document.getElementById('loadingOverlay');
 window.addEventListener('pageshow', () => overlay.classList.remove('active'));
 window.addEventListener('hashchange', () => {
   overlay.classList.remove('active');
-  showPanel(window.location.hash.slice(1));
+  const hash = window.location.hash.slice(1);
+  if (pageTitles[hash]) {
+    // It's a page navigation
+    showPanel(hash);
+  } else if (hash) {
+    // It's an in-page anchor link — expand parent accordion if needed, then scroll
+    const el = document.getElementById(hash);
+    if (el) {
+      // If the target is inside a collapsed issue-body, expand it
+      const body = el.closest('.issue-body');
+      if (body) {
+        const toggle = body.previousElementSibling;
+        if (toggle && toggle.classList.contains('issue-toggle')) {
+          toggle.setAttribute('aria-expanded', 'true');
+        }
+      }
+      // Scroll the target just enough to bring it into view
+      scrollToElement(el);
+    }
+  }
 });
-showPanel(window.location.hash.slice(1));
+// Initial page load
+const initHash = window.location.hash.slice(1);
+if (pageTitles[initHash]) {
+  showPanel(initHash);
+} else {
+  showPanel('home');
+  // If there's an anchor hash on load, expand parent accordion and scroll to center
+  if (initHash) {
+    setTimeout(() => {
+      const el = document.getElementById(initHash);
+      if (el) {
+        const body = el.closest('.issue-body');
+        if (body) {
+          const toggle = body.previousElementSibling;
+          if (toggle && toggle.classList.contains('issue-toggle')) {
+            toggle.setAttribute('aria-expanded', 'true');
+          }
+        }
+        scrollToElement(el);
+      }
+    }, 100);
+  }
+}
+
+// ── Intercept in-page anchor clicks so we control the scroll ──
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const hash = a.getAttribute('href').slice(1);
+  if (!hash || pageTitles[hash]) return; // let page-nav links go through showPanel
+  const el = document.getElementById(hash);
+  if (!el) return;
+  e.preventDefault();
+  const body = el.closest('.issue-body');
+  if (body) {
+    const toggle = body.previousElementSibling;
+    if (toggle && toggle.classList.contains('issue-toggle')) {
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+  }
+  // Set the hash so :target CSS triggers, but suppress the browser's auto-scroll
+  const wrapper = document.querySelector('.content-wrapper');
+  const prevScroll = wrapper.scrollTop;
+  location.hash = hash;
+  wrapper.scrollTop = prevScroll;
+  scrollToElement(el);
+});
 
 document.querySelectorAll('.card').forEach(card => {
   card.addEventListener('click', () => overlay.classList.add('active'));
+});
+
+// ── Issues accordion ──
+document.querySelectorAll('.issue-toggle').forEach(toggle => {
+  toggle.addEventListener('click', () => {
+    const expanded = toggle.getAttribute('aria-expanded') === 'true';
+    // Close all
+    document.querySelectorAll('.issue-toggle').forEach(t => t.setAttribute('aria-expanded', 'false'));
+    // Open clicked (unless it was already open)
+    if (!expanded) toggle.setAttribute('aria-expanded', 'true');
+  });
 });
