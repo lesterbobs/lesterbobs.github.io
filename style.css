@@ -772,7 +772,6 @@ main.issues-main { min-height: 30rem }
   line-height: 1.6;
   margin-bottom: var(--space-sm);
   padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
   transition: background 0.5s ease;
 }
 
@@ -789,15 +788,11 @@ main.issues-main { min-height: 30rem }
 /* Highlight the targeted footnote */
 .issue-footnotes li:target {
   background: rgba(255, 235, 140, 0.55);
-  box-shadow: 0 0 0 3px rgba(255, 200, 20, 0.35);
-  border-radius: var(--radius-sm);
 }
 
 /* Highlight the targeted superscript reference when returning from a footnote */
 sup a:target {
   background: rgba(255, 235, 140, 0.55);
-  box-shadow: 0 2px 0 2px rgba(255, 235, 140, 0.55), 0 0 0 3px rgba(255, 200, 20, 0.35);
-  border-radius: 3px;
 }
 
 /* Superscript footnote refs */
