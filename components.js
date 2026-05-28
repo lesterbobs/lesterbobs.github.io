@@ -50,7 +50,7 @@ function showPanel(hash) {
 }
 
 document.querySelector('header').innerHTML =
-  `<a href="#home" class="brand">Lester Alaric Roberts</a>
+  `<a href="#home" class="brand" data-disco="DISCO MODE: ACTIVATED">Lester Alaric Roberts</a>
   <button class="hamburger" aria-label="Menu" aria-expanded="false">
     <span></span><span></span><span></span>
   </button>
@@ -64,7 +64,85 @@ document.querySelector('header').innerHTML =
   </nav>`;
 
 document.querySelector('footer').innerHTML =
-  `&copy; ${new Date().getFullYear()} Lester Roberts &mdash; <a href="https://www.linkedin.com/in/lester-roberts-b1188a163/">LinkedIn</a> &mdash; <a href="https://github.com/lesterbobs/lesterbobs.github.io">GitHub</a> &mdash; <a href="https://www.instagram.com/lesterbobs/">Instagram</a>`;
+  `<div class="footer-row">
+    <div class="footer-links">
+      &copy; ${new Date().getFullYear()} <span data-disco="Lester A.J. Roberts III">Lester Roberts</span> &mdash;
+      <span class="non-disco">
+        <a href="https://www.linkedin.com/in/lester-roberts-b1188a163/">LinkedIn</a> &mdash;
+        <a href="https://github.com/lesterbobs/lesterbobs.github.io">GitHub</a> &mdash;
+        <a href="https://www.instagram.com/lesterbobs/">Instagram</a>
+      </span>
+      <span class="disco-only">Disco Mode Activations: <span data-disco-count>0</span></span>
+    </div>
+    <label class="disco-switch">
+      <input type="checkbox" id="discoToggle" aria-label="Toggle Nondescript Switch" />
+      <span class="disco-switch-track">
+        <span class="disco-switch-thumb"></span>
+        <span class="disco-switch-label disco-switch-off">OFF</span>
+        <span class="disco-switch-label disco-switch-on">DISCO</span>
+      </span>
+    </label>
+  </div>`;
+
+// ── Disco mode ──
+const DISCO_KEY = 'disco-mode';
+const DISCO_COUNT_KEY = 'disco-toggle-count';
+
+function getDiscoCount() {
+  try { return parseInt(localStorage.getItem(DISCO_COUNT_KEY) || '0', 10) || 0; }
+  catch (e) { return 0; }
+}
+
+function renderDiscoCount() {
+  const n = getDiscoCount();
+  document.querySelectorAll('[data-disco-count]').forEach(el => {
+    el.textContent = n;
+  });
+}
+
+function setDisco(on, opts = {}) {
+  const { countToggle = true } = opts;
+  if (on && countToggle) {
+    try { localStorage.setItem(DISCO_COUNT_KEY, String(getDiscoCount() + 1)); } catch (e) {}
+    renderDiscoCount();
+  }
+  document.body.classList.toggle('disco', on);
+  // Swap alternate text on any element with a data-disco attribute
+  document.querySelectorAll('[data-disco]').forEach(el => {
+    if (on) {
+      if (el.dataset.discoOriginal === undefined) {
+        el.dataset.discoOriginal = el.textContent;
+      }
+      el.textContent = el.dataset.disco;
+    } else if (el.dataset.discoOriginal !== undefined) {
+      el.textContent = el.dataset.discoOriginal;
+    }
+  });
+  // Swap image src on any element with a data-disco-src attribute
+  document.querySelectorAll('[data-disco-src]').forEach(el => {
+    if (on) {
+      if (el.dataset.discoOriginalSrc === undefined) {
+        el.dataset.discoOriginalSrc = el.getAttribute('src');
+      }
+      el.setAttribute('src', el.dataset.discoSrc);
+    } else if (el.dataset.discoOriginalSrc !== undefined) {
+      el.setAttribute('src', el.dataset.discoOriginalSrc);
+    }
+  });
+  try { localStorage.setItem(DISCO_KEY, on ? '1' : '0'); } catch (e) {}
+}
+
+const discoToggle = document.getElementById('discoToggle');
+if (discoToggle) {
+  renderDiscoCount();
+  let saved = '0';
+  try { saved = localStorage.getItem(DISCO_KEY) || '0'; } catch (e) {}
+  if (saved === '1') {
+    discoToggle.checked = true;
+    setDisco(true, { countToggle: false });
+  }
+  discoToggle.addEventListener('change', () => setDisco(discoToggle.checked));
+}
 
 // ── Hamburger toggle ──
 const hamburger = document.querySelector('.hamburger');
