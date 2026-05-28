@@ -74,16 +74,19 @@ document.querySelector('footer').innerHTML =
       </span>
       <span class="disco-only">Disco Mode Activations: <span data-disco-count>0</span></span>
     </div>
-    <label class="disco-switch">
-      <input type="checkbox" id="discoToggle" aria-label="Toggle Nondescript Switch" />
-      <span class="disco-switch-track">
-        <span class="disco-switch-thumb"></span>
-        <span class="disco-switch-label disco-switch-off">OFF</span>
-        <span class="disco-switch-label disco-switch-on">DISCO</span>
-      </span>
-    </label>
+
+    
   </div>`;
 
+//
+  //  <label class="disco-switch">
+    //  <input type="checkbox" id="discoToggle" aria-label="Toggle Nondescript Switch" />
+      //<span class="disco-switch-track">
+        //<span class="disco-switch-thumb"></span>
+        //<span class="disco-switch-label disco-switch-off">OFF</span>
+        //<span class="disco-switch-label disco-switch-on">DISCO</span>
+      //</span>
+    //</label>
 // ── Disco mode ──
 const DISCO_KEY = 'disco-mode';
 const DISCO_COUNT_KEY = 'disco-toggle-count';
